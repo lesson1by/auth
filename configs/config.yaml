@@ -1,0 +1,14 @@
+jwt:
+  expiration_minutes: 60
+  secret: "${JWT_SECRET}"
+
+server:
+  port: 8080
+  host: "localhost"
+
+db:
+  name: "myapp_db"
+  port: 5432
+  user: "myapp_user"
+  password: "${DB_PASSWORD}"
+  host: "localhost"
