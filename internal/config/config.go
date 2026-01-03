@@ -4,19 +4,12 @@ import (
 	"authProject/internal/models"
 	"errors"
 	"fmt"
-	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 	"log"
 	"strings"
 )
 
 func LoadConfig() (*models.Config, error) {
-	// Загружаем .env файл, если он существует
-	// Игнорируем ошибку, если файл не найден (необязателен)
-	if err := godotenv.Load(); err != nil {
-		log.Println("Warning: .env file not found or error loading it:", err)
-	}
-
 	var cfg models.Config
 	var viperError viper.ConfigFileNotFoundError
 	localViper := viper.New()
@@ -31,6 +24,11 @@ func LoadConfig() (*models.Config, error) {
 	localViper.SetDefault("jwt.secret", "secret")
 	localViper.SetDefault("jwt.expirationMinutes", 60)
 	localViper.SetDefault("server.Port", 8080)
+	localViper.SetDefault("db.Host", "localhost")
+	localViper.SetDefault("db.Port", 5432)
+	localViper.SetDefault("db.Name", "myapp_db")
+	localViper.SetDefault("db.User", "myapp_user")
+	localViper.SetDefault("db.Password", "mypassword")
 
 	if err := localViper.ReadInConfig(); err != nil {
 		if errors.As(err, &viperError) {
