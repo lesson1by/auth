@@ -4,12 +4,19 @@ import (
 	"authProject/internal/models"
 	"errors"
 	"fmt"
+	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 	"log"
 	"strings"
 )
 
 func LoadConfig() (*models.Config, error) {
+	// Загружаем .env файл, если он существует
+	// Игнорируем ошибку, если файл не найден (необязателен)
+	if err := godotenv.Load(); err != nil {
+		log.Println("Warning: .env file not found or error loading it:", err)
+	}
+
 	var cfg models.Config
 	var viperError viper.ConfigFileNotFoundError
 	localViper := viper.New()
