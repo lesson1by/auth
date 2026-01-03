@@ -1,0 +1,58 @@
+package config
+
+import (
+	"authProject/internal/models"
+	"errors"
+	"fmt"
+	"github.com/spf13/viper"
+	"log"
+	"strings"
+)
+
+func LoadConfig() (*models.Config, error) {
+	var cfg models.Config
+	var viperError viper.ConfigFileNotFoundError
+	localViper := viper.New()
+	localViper.SetConfigName("config")
+	localViper.SetConfigType("yaml")
+	localViper.AddConfigPath(".")
+	localViper.AddConfigPath("./configs/")
+
+	localViper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	localViper.AutomaticEnv()
+
+	localViper.SetDefault("jwt.secret", "secret")
+	localViper.SetDefault("jwt.expirationMinutes", 60)
+	localViper.SetDefault("server.Port", 8080)
+	localViper.SetDefault("db.Host", "localhost")
+	localViper.SetDefault("db.Port", 5432)
+	localViper.SetDefault("db.Name", "myapp_db")
+	localViper.SetDefault("db.User", "myapp_user")
+	localViper.SetDefault("db.Password", "mypassword")
+
+	if err := localViper.ReadInConfig(); err != nil {
+		if errors.As(err, &viperError) {
+			log.Println("Config file not found, using default settings")
+		} else {
+			return nil, fmt.Errorf("found config file, but encountered an error : %v", err)
+		}
+	}
+	if err := localViper.Unmarshal(&cfg); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal config: %v", err)
+	}
+
+	if ok, err := Validate(&cfg); !ok {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
+func Validate(c *models.Config) (bool, error) {
+	if c.DB.Host == "" || c.DB.Port == 0 {
+		return false, errors.New("invalid database configuration")
+	}
+	if c.Server.Host == "" || c.Server.Port == 0 {
+		return false, errors.New("invalid server configuration")
+	}
+	return true, nil
+}
