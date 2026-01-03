@@ -1,12 +1,12 @@
 package config
 
 import (
+	"authProject/internal/models"
 	"errors"
 	"fmt"
 	"github.com/spf13/viper"
 	"log"
-
-	"authProject/internal/models"
+	"strings"
 )
 
 func LoadConfig() (*models.Config, error) {
@@ -18,12 +18,12 @@ func LoadConfig() (*models.Config, error) {
 	localViper.AddConfigPath(".")
 	localViper.AddConfigPath("./configs/")
 
-
+	localViper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	localViper.AutomaticEnv()
 
-	localViper.SetDefault("JWT.Secret", "secret")
-	localViper.SetDefault("JWT.ExpirationMinutes", 60)
-	localViper.SetDefault("SERVER.Port",8080)
+	localViper.SetDefault("jwt.secret", "secret")
+	localViper.SetDefault("jwt.expirationMinutes", 60)
+	localViper.SetDefault("server.Port", 8080)
 
 	if err := localViper.ReadInConfig(); err != nil {
 		if errors.As(err, &viperError) {

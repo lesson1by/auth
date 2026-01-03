@@ -11,6 +11,11 @@ import (
 	"time"
 )
 
+var (
+	ErrUsernameRequired = errors.New("username is required")
+	ErrPasswordRequired = errors.New("password is required")
+)
+
 type UserService interface {
 	ValidateCredentials(username, password string) (bool, error)
 	Register(username, password string) error
@@ -22,15 +27,9 @@ type userService struct {
 	Config    models.Config
 }
 
-func NewUserService(config *models.Config) UserService {
-	if config == nil {
-		return &userService{
-			UserStore: store.NewInMemoryStore(),
-			Config:    models.Config{},
-		}
-	}
+func NewUserService(config *models.Config, userStore store.UserStore) UserService {
 	return &userService{
-		UserStore: store.NewInMemoryStore(),
+		UserStore: userStore,
 		Config:    *config,
 	}
 }
@@ -48,10 +47,10 @@ func (s *userService) ValidateCredentials(username, password string) (bool, erro
 
 func (s *userService) Register(username, password string) error {
 	if username == "" {
-		return errors.New("username is required")
+		return ErrUsernameRequired
 	}
 	if password == "" {
-		return errors.New("password is required")
+		return ErrPasswordRequired
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)

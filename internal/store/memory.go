@@ -2,7 +2,15 @@ package store
 
 import (
 	"authProject/internal/models"
+	"database/sql"
 	"errors"
+	"github.com/lib/pq"
+)
+
+var (
+	ErrUserNotFound      = errors.New("user not found")
+	ErrUserAlreadyExists = errors.New("user already exists")
+	ErrUsernameRequired  = errors.New("username is required")
 )
 
 type UserStore interface {
@@ -10,31 +18,56 @@ type UserStore interface {
 	Create(user models.User) error
 }
 
-type InMemoryStore struct {
-	Users map[string]models.User
+type PgxStore struct {
+	db *sql.DB
 }
 
-func NewInMemoryStore() *InMemoryStore {
-	return &InMemoryStore{
-		Users: make(map[string]models.User),
+func NewPgxStore(db *sql.DB) *PgxStore {
+	return &PgxStore{db: db}
+}
+
+func CreateUsersTable(db *sql.DB) error {
+	query := `
+	CREATE TABLE IF NOT EXISTS users (
+		username VARCHAR(255) PRIMARY KEY,
+		password VARCHAR(255) NOT NULL
+	);
+	`
+	_, err := db.Exec(query)
+	return err
+}
+
+func (p *PgxStore) Get(username string) (models.User, error) {
+	var user models.User
+	err := p.db.QueryRow(`SELECT username, password FROM users WHERE username = $1 `,
+		username,
+	).Scan(&user.Username, &user.Password)
+	if err == sql.ErrNoRows {
+		return models.User{}, ErrUserNotFound
 	}
-}
-
-func (in *InMemoryStore) Get(username string) (models.User, error) {
-	user, ok := in.Users[username]
-	if !ok {
-		return models.User{}, errors.New("user not found")
+	if err != nil {
+		return models.User{}, err
 	}
 	return user, nil
 }
 
-func (in *InMemoryStore) Create(user models.User) error {
+func (p *PgxStore) Create(user models.User) error {
 	if user.Username == "" {
-		return errors.New("username is required")
+		return ErrUsernameRequired
 	}
-	if _, ok := in.Users[user.Username]; ok {
-		return errors.New("user already exists")
+	_, err := p.db.Exec(`INSERT INTO users (username, password) VALUES($1,$2)`,
+		user.Username,
+		user.Password,
+	)
+
+	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) {
+			if pqErr.Code == "23505" {
+				return ErrUserAlreadyExists
+			}
+		}
+		return err
 	}
-	in.Users[user.Username] = user
 	return nil
 }

@@ -7,7 +7,8 @@ import (
 
 type LoginHandlers struct {
 	Serv service.UserService
-} // спросить почему нельзя эту структура положить в /models и почему из-за этого получается цикл импортов
+}
+
 func (h *LoginHandlers) Handle(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
@@ -15,15 +16,19 @@ func (h *LoginHandlers) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	username, password, ok := r.BasicAuth()
-	if !ok {
+	username, password, hasAuth := r.BasicAuth()
+	if !hasAuth {
 		w.Header().Set("WWW-Authenticate", `Basic realm="login"`)
 		http.Error(w, "missing or invalid basic auth", http.StatusUnauthorized)
 		return
 	}
 
 	ok, err := h.Serv.ValidateCredentials(username, password)
-	if err != nil || !ok {
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="login"`)
 		http.Error(w, "invalid credentials", http.StatusUnauthorized)
 		return
